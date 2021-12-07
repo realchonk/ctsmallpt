@@ -41,11 +41,7 @@ public:
    }
 
    constexpr String& operator=(const String& s) {
-      if (s.len >= cap) {
-         delete[] buffer;
-         cap = s.cap;
-         buffer = new char[cap];
-      }
+      reserve(s.len + 1, false);
       len = s.len;
       copy(buffer, s.buffer, len + 1);
       return *this;
@@ -60,13 +56,25 @@ public:
       return *this;
    }
    constexpr String& operator=(std::string_view s) {
-      reserve(s.len + 1, false);
+      len = s.size();
+      reserve(len + 1, false);
+      copy(buffer, s.data(), s.size());
+      buffer[len] = '\0';
+      return *this;
    }
 
-   constexpr void reserve(std::size_t num, bool copy) {
+   constexpr String& operator+=(const String& s) {
+      reserve(len + s.len + 1, true);
+   }
+
+   constexpr void reserve(std::size_t num, bool do_copy = true) {
       if (cap < num) {
          cap = num;
          char* new_buffer = new char[cap];
+         if (do_copy)
+            copy(new_buffer, buffer, len);
+         delete[] buffer;
+         buffer = new_buffer;
       }
    }
 
