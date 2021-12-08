@@ -10,11 +10,12 @@
 #include <cmath>
 #include <array>
 #include "random.hpp"
+#include "string.hpp"
 
 // Define as 1 if you don't want runtime-support.
 #define NORT 0
 
-constexpr int width = 1024, height = 768, num_samps = 5;
+constexpr int width = 10, height = 10, num_samps = 1;
 
 
 constexpr auto my_abs(auto n) noexcept {
@@ -276,24 +277,43 @@ constexpr auto compute_cexpr() {
    return c;
 }
 
+constexpr auto generate_img(const auto& c) {
+   String str{};
+   str += "P3\n";
+   str += String::parse_int(width);
+   str += ' ';
+   str += String::parse_int(height);
+   str += "\n255\n";
+   for (std::size_t i = 0; i < width*height; ++i) {
+      str += String::parse_int(toInt(c[i].x));
+      str += ' ';
+      str += String::parse_int(toInt(c[i].y));
+      str += ' ';
+      str += String::parse_int(toInt(c[i].z));
+      str += ' ';
+   }
+   return str;
+}
+
 static int write_file(const char* filename, const auto& c) {
    FILE* file = std::fopen(filename, "w");
    if (!file) {
       std::fprintf(stderr, "smallpt: failed to open '%s'\n", filename);
       return 1;
    }
-   std::fprintf(file, "P3\n%d %d\n%d\n", width, height, 255);
+   std::fputs(c.c_str(), file);
+   /*std::fprintf(file, "P3\n%d %d\n%d\n", width, height, 255);
    for (int i = 0; i < width*height; i++) {
      fprintf(file, "%d %d %d ", toInt(c[i].x), toInt(c[i].y), toInt(c[i].z));
-   }
+   }*/
    std::fclose(file);
    return 0;
 }
 
 int main(int argc, char *argv[]){
    if (argc == 1) {
-      constexpr auto image = compute_cexpr();
-      return write_file("image_cexpr.ppm", image);
+      static constinit auto ppm = generate_img(compute_cexpr());
+      return write_file("image_cexpr.ppm", ppm);
    } else if (argc == 2) {
 #if NORT
       std::fputs("smallpt: runtime execution not supporte.\n", stderr);
@@ -301,7 +321,8 @@ int main(int argc, char *argv[]){
       // static, because of stack overflow
       static std::array<Vec, width * height> c{};
       compute_omp(c, std::atoi(argv[1]));
-      return write_file("image.ppm", c);
+      auto ppm = generate_img(c);
+      return write_file("image.ppm", ppm);
 #endif
    } else {
       std::fputs("Usage: smallpt [num_samps]\n", stderr);
